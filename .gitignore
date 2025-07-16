@@ -1,0 +1,48 @@
+# macOS / Windows
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+
+# Maven
+/target/
+/.mvn/wrapper/maven-wrapper.jar
+!**/src/main/**/target/
+!**/src/test/**/target/
+
+# Compiled class files
+*.class
+
+# Editor swap/temp files
+*~
+*.swp
+
+# STS / Eclipse
+.apt_generated
+.factorypath
+.springBeans
+.settings/
+.classpath
+.project
+.sts4-cache
+
+# IntelliJ IDEA
+.idea/
+/*.iws
+/*.iml
+/*.ipr
+.idea/*workspace.xml
+
+# NetBeans
+/nbproject/private/
+/nbbuild/
+/dist/
+/nbdist/
+/.nb-gradle/
+build/
+!**/src/main/**/build/
+!**/src/test/**/build/
+
+# VS Code
+.vscode/
