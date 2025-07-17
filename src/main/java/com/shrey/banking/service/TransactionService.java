@@ -5,11 +5,9 @@ import java.util.List;
 
 public interface TransactionService {
     Transaction saveTransaction(Transaction transaction);
-    void saveAllTransactions(List<Transaction> transactions);
     List<Transaction> getAllTransactions();
     Transaction getTransactionById(Long id);
     Transaction updateTransaction(Long id, Transaction updated);
-    void deleteTransaction(Long id);
-    void deleteAllTransactions();
+    Transaction deleteTransaction(Long id);
     List<Transaction> upsertTransactions(List<Transaction> transactions);
 }

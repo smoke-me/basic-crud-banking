@@ -34,14 +34,6 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void saveAllTransactions(List<Transaction> transactions) {
-        transactionRepository.saveAll(transactions);
-        
-        // Export to Excel after batch save
-        excelExportService.exportTransactionsToExcel();
-    }
-
-    @Override
     public List<Transaction> getAllTransactions() {
         return transactionRepository.findAll();
     }
@@ -68,21 +60,15 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public void deleteTransaction(Long id) {
-        getTransactionById(id); // Check if it exists
+    public Transaction deleteTransaction(Long id) {
+        Transaction transaction = getTransactionById(id); // Check if it exists
 
         transactionRepository.deleteById(id);
         
         // Export to Excel after delete
         excelExportService.exportTransactionsToExcel();
-    }
 
-    @Override
-    public void deleteAllTransactions() {
-        transactionRepository.deleteAll();
-        
-        // Export to Excel after delete all
-        excelExportService.exportTransactionsToExcel();
+        return transaction;
     }
 
     @Override
@@ -94,11 +80,9 @@ public class TransactionServiceImpl implements TransactionService {
                     updateTransaction(transaction.getId(), transaction);
                 } catch (TransactionNotFoundException e) {
                     // ID present in Excel but not in DB, treat as new
-                    Long id = transaction.getId();
                     transaction.setId(null);
                     
-                    Transaction newTransaction = transactionRepository.save(transaction);
-                    newTransaction.setId(id);
+                    saveTransaction(transaction);
                 }
             } else {
                 transactionRepository.save(transaction);

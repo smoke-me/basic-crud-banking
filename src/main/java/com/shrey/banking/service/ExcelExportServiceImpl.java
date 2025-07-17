@@ -89,11 +89,6 @@ public class ExcelExportServiceImpl implements ExcelExportService {
                 }
             }
             
-            // Auto-size columns for better readability
-            for (int i = 1; i <= 3; i++) { // Skip hidden ID column
-                sheet.autoSizeColumn(i);
-            }
-            
             // Save workbook
             String filePath = Paths.get("src/main/resources/transactions.xlsx").toAbsolutePath().toString();
             try (FileOutputStream outputStream = new FileOutputStream(filePath)) {

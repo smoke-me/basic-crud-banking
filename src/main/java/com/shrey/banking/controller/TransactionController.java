@@ -38,8 +38,8 @@ public class TransactionController {
     }
 
     @DeleteMapping("/{id}")
-    public void delete(@PathVariable Long id)
+    public Transaction delete(@PathVariable Long id)
     {
-        transactionService.deleteTransaction(id);
+        return transactionService.deleteTransaction(id);
     }
 }
