@@ -25,8 +25,8 @@ public class TransactionServiceImpl implements TransactionService {
     }
 
     @Override
-    public List<Transaction> saveAllTransactions(List<Transaction> transactions) {
-        return transactionRepository.saveAll(transactions);
+    public void saveAllTransactions(List<Transaction> transactions) {
+        transactionRepository.saveAll(transactions);
     }
 
     @Override
@@ -57,5 +57,23 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     public void deleteAllTransactions() {
         transactionRepository.deleteAll();
+    }
+
+    @Override
+    public List<Transaction> upsertTransactions(List<Transaction> transactions) {
+        for (Transaction transaction : transactions) {
+            if (transaction.getId() != null) {
+                try {
+                    updateTransaction(transaction.getId(), transaction);
+                } catch (TransactionNotFoundException e) {
+                    saveTransaction(transaction);
+                }
+                continue;
+            }
+
+            saveTransaction(transaction);
+        }
+
+        return transactions;
     }
 }
