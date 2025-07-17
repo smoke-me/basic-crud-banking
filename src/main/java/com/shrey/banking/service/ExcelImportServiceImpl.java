@@ -18,7 +18,6 @@ import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.locks.ReentrantLock;
 
 @Service
 public class ExcelImportServiceImpl implements ExcelImportService {
@@ -31,12 +30,10 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     @Value("${excel.import.file.path}")
     private String excelFilePath;
 
-    private final ReentrantLock lock = new ReentrantLock();
-
     @Override
     public void importTransactionsFromExcel() {
         List<Transaction> transactions = new ArrayList<>();
-        lock.lock();
+        ExcelFileLock.getLock().lock();
         try {
             Resource resource = resourceLoader.getResource(excelFilePath);
             InputStream inputStream = resource.getInputStream();
@@ -100,48 +97,35 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         } catch (Exception e) {
             throw new RuntimeException("Failed to import Excel: " + e.getMessage());
         } finally {
-            lock.unlock();
+            ExcelFileLock.getLock().unlock();
         }
     }
 
     private void insertIdColumn(Sheet sheet) {
-        for (int r = 0; r <= sheet.getLastRowNum(); r++) {
+        // Compute max column index across all rows
+        int maxColumn = 0;
+        int lastRowNum = sheet.getLastRowNum();
+        for (int r = 0; r <= lastRowNum; r++) {
             Row row = sheet.getRow(r);
-            if (row == null) {
-                row = sheet.createRow(r); // Create if missing (e.g., header)
-            }
-            int lastCellNum = row.getLastCellNum();
-            if (lastCellNum > 0) { // Only shift if cells exist
-                for (int c = lastCellNum - 1; c >= 0; c--) { // From end to start
-                    Cell oldCell = row.getCell(c);
-                    if (oldCell != null) {
-                        Cell newCell = row.createCell(c + 1, oldCell.getCellType());
-                        // Copy value based on type
-                        switch (oldCell.getCellType()) {
-                            case STRING:
-                                newCell.setCellValue(oldCell.getStringCellValue());
-                                break;
-                            case NUMERIC:
-                                newCell.setCellValue(oldCell.getNumericCellValue());
-                                break;
-                            case BOOLEAN:
-                                newCell.setCellValue(oldCell.getBooleanCellValue());
-                                break;
-                            case FORMULA:
-                                newCell.setCellFormula(oldCell.getCellFormula());
-                                break;
-                            default:
-                                break;
-                        }
-                        if (oldCell.getCellStyle() != null) {
-                            newCell.setCellStyle(oldCell.getCellStyle());
-                        }
-                        // Clear old cell instead of remove (avoids resizing issues)
-                        oldCell.setBlank();
-                    }
+            if (row != null) {
+                int lastCellNum = row.getLastCellNum();
+                if (lastCellNum > maxColumn) {
+                    maxColumn = lastCellNum;
                 }
             }
-            // Add ID cell at 0
+        }
+
+        // Shift all existing columns right by 1 if any exist
+        if (maxColumn > 0) {
+            sheet.shiftColumns(0, maxColumn - 1, 1);
+        }
+
+        // Insert ID cells in new column 0 (create rows if needed)
+        for (int r = 0; r <= lastRowNum; r++) {
+            Row row = sheet.getRow(r);
+            if (row == null) {
+                row = sheet.createRow(r);
+            }
             if (r == 0) {
                 row.createCell(0, CellType.STRING).setCellValue("ID"); // Header string
             } else {

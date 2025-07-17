@@ -21,4 +21,15 @@ public class GlobalExceptionHandler {
 
         return new ResponseEntity<>(body, HttpStatus.NOT_FOUND);
     }
+
+    @ExceptionHandler(ExcelExportException.class)
+    public ResponseEntity<?> handleExcelExportException(ExcelExportException ex) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("timestamp", LocalDateTime.now());
+        body.put("status", 500);
+        body.put("error", "Internal Server Error");
+        body.put("message", ex.getMessage());
+
+        return new ResponseEntity<>(body, HttpStatus.INTERNAL_SERVER_ERROR);
+    }
 }
