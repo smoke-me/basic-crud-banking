@@ -19,6 +19,9 @@ public class TransactionServiceImpl implements TransactionService {
     @Autowired
     private ExcelExportService excelExportService;
 
+    @Autowired
+    private MailService mailService;
+
     @Override
     public Transaction saveTransaction(Transaction transaction) {
         if (transaction.getDate() == null) {
@@ -29,6 +32,8 @@ public class TransactionServiceImpl implements TransactionService {
         
         // Export to Excel after saving
         excelExportService.exportTransactionsToExcel();
+
+        mailService.sendTransactionCreatedEmail(savedTransaction);
         
         return savedTransaction;
     }
@@ -80,9 +85,13 @@ public class TransactionServiceImpl implements TransactionService {
                     updateTransaction(transaction.getId(), transaction);
                 } catch (TransactionNotFoundException e) {
                     // ID present in Excel but not in DB, treat as new
+                    Long oldId = transaction.getId();
                     transaction.setId(null);
-                    
-                    saveTransaction(transaction);
+
+                    // If the ID is changed, export to Excel
+                    if (oldId != transactionRepository.save(transaction).getId()) {
+                        excelExportService.exportTransactionsToExcel();
+                    }
                 }
             } else {
                 transactionRepository.save(transaction);
