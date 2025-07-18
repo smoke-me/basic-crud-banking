@@ -79,19 +79,16 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public List<Transaction> upsertTransactions(List<Transaction> transactions) {
+
         for (Transaction transaction : transactions) {
             if (transaction.getId() != null) {
                 try {
                     updateTransaction(transaction.getId(), transaction);
                 } catch (TransactionNotFoundException e) {
                     // ID present in Excel but not in DB, treat as new
-                    Long oldId = transaction.getId();
                     transaction.setId(null);
 
-                    // If the ID is changed, export to Excel
-                    if (oldId != transactionRepository.save(transaction).getId()) {
-                        excelExportService.exportTransactionsToExcel();
-                    }
+                    transactionRepository.save(transaction);
                 }
             } else {
                 transactionRepository.save(transaction);
