@@ -1,5 +1,6 @@
 package com.shrey.banking.config;
 
+import com.shrey.banking.service.ExcelExportService;
 import com.shrey.banking.service.ExcelImportService;
 import com.shrey.banking.service.ExcelFileLock;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -34,6 +35,9 @@ public class FileWatcherConfig {
 
         @Autowired
         private ExcelImportService excelImportService;
+
+        @Autowired
+        private ExcelExportService excelExportService;
 
         @Value("${app.excel.import.file.path}")
         private String excelFilePath;

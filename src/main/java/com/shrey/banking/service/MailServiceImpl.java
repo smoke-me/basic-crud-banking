@@ -1,5 +1,6 @@
 package com.shrey.banking.service;
 
+import com.shrey.banking.entity.Recipient;
 import com.shrey.banking.entity.Transaction;
 import jakarta.mail.MessagingException;
 import jakarta.mail.internet.MimeMessage;
@@ -148,6 +149,35 @@ public class MailServiceImpl implements MailService {
             } finally {
                 ExcelFileLock.getLock().unlock();
             }
+
+            mailSender.send(message);
+        } catch (MessagingException e) {
+            throw new RuntimeException("Failed to send email: " + e.getMessage());
+        }
+    }
+
+    @Async("emailExecutor")
+    @Override
+    public void sendPaymentEmail(Recipient recipient, Transaction transaction) {
+        String toEmail = recipient.getEmail();
+
+        MimeMessage message = mailSender.createMimeMessage();
+        try {
+            MimeMessageHelper helper = new MimeMessageHelper(message, true); // true for attachments
+
+            helper.setFrom(fromEmail);
+            helper.setTo(toEmail);
+            helper.setSubject("Payment Received");
+
+            Context context = new Context();
+            context.setVariable("recipientDescription", recipient.getDescription());
+            context.setVariable("description", transaction.getDescription());
+            context.setVariable("amount", transaction.getAmount());
+            context.setVariable("date", transaction.getDate());
+
+            String htmlContent = templateEngine.process("payment-sent", context);
+
+            helper.setText(htmlContent, true); // true for HTML
 
             mailSender.send(message);
         } catch (MessagingException e) {

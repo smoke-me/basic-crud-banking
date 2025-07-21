@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="">
+<head>
+    <title>Payment Sent</title>
+    <style>
+        body { font-family: Arial, sans-serif; }
+        .table { border-collapse: collapse; width: 100%; }
+        .table th, .table td { border: 1px solid #ddd; padding: 8px; }
+        .table th { background-color: #f2f2f2; }
+    </style>
+</head>
+<body>
+<p th:text="'Dear ' + ${recipientDescription} + ','"></p>
+<p>You have received a payment. Here are the details:</p>
+<table class="table">
+    <tr>
+        <th>Description</th>
+        <th>Amount</th>
+        <th>Date</th>
+    </tr>
+    <tr>
+        <td th:text="${description}"></td>
+        <td th:text="${amount}"></td>
+        <td th:text="${date}"></td>
+    </tr>
+</table>
+<p>Thank you!</p>
+<p>Best regards,<br/>Automated Mailing Service</p>
+</body>
+</html> 

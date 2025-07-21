@@ -10,9 +10,7 @@ import org.springframework.core.io.Resource;
 import org.springframework.stereotype.Service;
 import org.springframework.core.io.ResourceLoader;
 
-import java.io.FileOutputStream;
 import java.io.InputStream;
-import java.nio.file.Paths;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
