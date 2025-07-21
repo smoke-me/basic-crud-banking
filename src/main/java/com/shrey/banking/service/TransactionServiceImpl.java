@@ -24,15 +24,21 @@ public class TransactionServiceImpl implements TransactionService {
 
     @Override
     public Transaction saveTransaction(Transaction transaction) {
-        if (transaction.getDate() == null) {
-            transaction.setDate(LocalDate.now());
+        Transaction savedTransaction;
+        ExcelFileLock.getLock().lock();
+        try {
+            if (transaction.getDate() == null) {
+                transaction.setDate(LocalDate.now());
+            }
+
+            savedTransaction = transactionRepository.save(transaction);
+            
+            excelExportService.saveTransactionToExcel(savedTransaction);
+
+        } finally {
+            ExcelFileLock.getLock().unlock();
         }
-
-        Transaction savedTransaction = transactionRepository.save(transaction);
         
-        // Export to Excel after saving
-        excelExportService.exportTransactionsToExcel();
-
         mailService.sendTransactionCreatedEmail(savedTransaction);
         
         return savedTransaction;
@@ -51,50 +57,98 @@ public class TransactionServiceImpl implements TransactionService {
     @Override
     @Transactional
     public Transaction updateTransaction(Long id, Transaction updatedTransaction) {
-        Transaction existingTransaction = getTransactionById(id);
-        existingTransaction.setDescription(updatedTransaction.getDescription());
-        existingTransaction.setAmount(updatedTransaction.getAmount());
-        existingTransaction.setDate(updatedTransaction.getDate());
+        Transaction oldTransaction;
+        Transaction savedTransaction;
+        ExcelFileLock.getLock().lock();
+        try {
+            Transaction existingTransaction = getTransactionById(id);
+            
+            oldTransaction = Transaction.builder()
+                    .id(existingTransaction.getId())
+                    .description(existingTransaction.getDescription())
+                    .amount(existingTransaction.getAmount())
+                    .date(existingTransaction.getDate())
+                    .build();
+            
+            existingTransaction.setDescription(updatedTransaction.getDescription());
+            existingTransaction.setAmount(updatedTransaction.getAmount());
+            existingTransaction.setDate(updatedTransaction.getDate());
 
-        Transaction savedTransaction = transactionRepository.save(existingTransaction);
+            savedTransaction = transactionRepository.save(existingTransaction);
+            
+            excelExportService.updateTransactionInExcel(id, updatedTransaction);
+
+        } finally {
+            ExcelFileLock.getLock().unlock();
+        }
         
-        // Export to Excel after update
-        excelExportService.exportTransactionsToExcel();
-        
+        mailService.sendTransactionUpdatedEmail(oldTransaction, savedTransaction);
+
         return savedTransaction;
     }
 
     @Override
     public Transaction deleteTransaction(Long id) {
-        Transaction transaction = getTransactionById(id); // Check if it exists
+        Transaction transaction;
+        ExcelFileLock.getLock().lock();
+        try {
+            transaction = getTransactionById(id);
+            transactionRepository.deleteById(id);
+            
+            excelExportService.deleteTransactionInExcel(id);
 
-        transactionRepository.deleteById(id);
-        
-        // Export to Excel after delete
-        excelExportService.exportTransactionsToExcel();
+        } finally {
+            ExcelFileLock.getLock().unlock();
+        }
+
+        mailService.sendTransactionDeletedEmail(transaction);
 
         return transaction;
     }
 
     @Override
     @Transactional
-    public List<Transaction> upsertTransactions(List<Transaction> transactions) {
+    public void upsertTransactions(List<Transaction> transactions) {
+        // Get all existing transaction IDs from database
+        List<Long> existingIds = transactionRepository.findAll()
+                .stream()
+                .map(Transaction::getId)
+                .toList();
 
+        // Get all transaction IDs from Excel (only those with IDs)
+        List<Long> excelIds = transactions.stream()
+                .map(Transaction::getId)
+                .filter(id -> id != null)
+                .toList();
+
+        // Find IDs that exist in DB but not in Excel (these should be deleted)
+        List<Long> idsToDelete = existingIds.stream()
+                .filter(id -> !excelIds.contains(id))
+                .toList();
+
+        // Delete transactions that are no longer in Excel
+        if (!idsToDelete.isEmpty()) {
+            transactionRepository.deleteAllById(idsToDelete);
+        }
+
+        // Process upserts for transactions from Excel
         for (Transaction transaction : transactions) {
             if (transaction.getId() != null) {
                 try {
-                    updateTransaction(transaction.getId(), transaction);
+                    Transaction existingTransaction = getTransactionById(transaction.getId());
+                    existingTransaction.setDescription(transaction.getDescription());
+                    existingTransaction.setAmount(transaction.getAmount());
+                    existingTransaction.setDate(transaction.getDate());
+
+                    transactionRepository.save(existingTransaction);
                 } catch (TransactionNotFoundException e) {
                     // ID present in Excel but not in DB, treat as new
                     transaction.setId(null);
-
                     transactionRepository.save(transaction);
                 }
             } else {
                 transactionRepository.save(transaction);
             }
         }
-
-        return transactions;
     }
 }

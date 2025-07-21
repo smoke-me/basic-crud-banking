@@ -9,5 +9,5 @@ public interface TransactionService {
     Transaction getTransactionById(Long id);
     Transaction updateTransaction(Long id, Transaction updated);
     Transaction deleteTransaction(Long id);
-    List<Transaction> upsertTransactions(List<Transaction> transactions);
+    void upsertTransactions(List<Transaction> transactions);
 }
