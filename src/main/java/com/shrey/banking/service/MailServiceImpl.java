@@ -54,7 +54,6 @@ public class MailServiceImpl implements MailService {
 
             helper.setText(htmlContent, true); // true for HTML
 
-            // Attach Excel file with simple lock coordination
             ExcelFileLock.getLock().lock();
             try {
                 File attachment = new File(excelPath);
