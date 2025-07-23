@@ -1,22 +1,40 @@
 # macOS / Windows
 .DS_Store
 Thumbs.db
+desktop.ini
 
 # Logs
 *.log
+logs/
 
 # Maven
-/target/
-/.mvn/wrapper/maven-wrapper.jar
-!**/src/main/**/target/
-!**/src/test/**/target/
+**/target/
+**/.mvn/
+**/mvnw
+**/mvnw.cmd
+*.jar
+*.war
+*.ear
+*.nar
 
 # Compiled class files
 *.class
 
-# Editor swap/temp files
+# Package files
+*.zip
+*.tar.gz
+*.rar
+
+# Editor swap/temp/backup files
 *~
 *.swp
+*.swo
+*.tmp
+*#
+.#*
+*.bak
+*.orig
+*~
 
 # STS / Eclipse
 .apt_generated
@@ -26,13 +44,17 @@ Thumbs.db
 .classpath
 .project
 .sts4-cache
+**/.metadata/
 
 # IntelliJ IDEA
 .idea/
-/*.iws
-/*.iml
-/*.ipr
-.idea/*workspace.xml
+**/*.iws
+**/*.iml
+**/*.ipr
+*.iws
+*.iml
+*.ipr
+out/
 
 # NetBeans
 /nbproject/private/
@@ -43,8 +65,67 @@ Thumbs.db
 build/
 !**/src/main/**/build/
 !**/src/test/**/build/
+nbbuild/
+nbdist/
+.nb-gradle/
 
 # VS Code
 .vscode/
+*.code-workspace
 
-/src/main/resources/application-dev.properties
+# Spring Boot
+**/application-dev.properties
+**/application-local.properties
+**/application-secret.properties
+
+# Database
+*.db
+*.sqlite
+*.h2.db
+
+# Excel/Office backup files
+~$*
+*.xlsx~
+*.docx~
+*.pptx~
+
+# Security
+*.key
+*.pem
+*.p12
+*.jks
+*.keystore
+*.truststore
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Node modules (if any frontend components)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Gradle (just in case)
+.gradle/
+gradle-app.setting
+!gradle-wrapper.jar
+
+# OS generated files
+Thumbs.db
+ehthumbs.db
+Icon?
+.DocumentRevisions-V100
+.fseventsd
+.Spotlight-V100
+.TemporaryItems
+.Trashes
+.VolumeIcon.icns
+.com.apple.timemachine.donotpresent
+.AppleDB
+.AppleDesktop
+Network Trash Folder
+Temporary Items
+.apdisk
