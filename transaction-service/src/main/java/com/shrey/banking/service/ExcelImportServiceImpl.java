@@ -25,7 +25,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
     @Autowired
     private ResourceLoader resourceLoader;
 
-    @Value("${excel.import.file.path}")
+    @Value("${app.excel.import.file.path}")
     private String excelFilePath;
 
     @Override
@@ -33,7 +33,7 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         List<Transaction> transactions = new ArrayList<>();
         ExcelFileLock.getLock().lock();
         try {
-            Resource resource = resourceLoader.getResource(excelFilePath);
+            Resource resource = resourceLoader.getResource("file:" + excelFilePath);
             try (InputStream inputStream = resource.getInputStream();
                  Workbook workbook = new XSSFWorkbook(inputStream)) {
 
@@ -47,7 +47,8 @@ public class ExcelImportServiceImpl implements ExcelImportService {
 
                 sheet.setColumnHidden(0, true);
 
-                for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+                int lastRowWithData = findLastRowWithData(sheet);
+                for (int i = 1; i <= lastRowWithData; i++) {
                     Row row = sheet.getRow(i);
                     if (row == null) continue;
 
@@ -81,10 +82,37 @@ public class ExcelImportServiceImpl implements ExcelImportService {
         }
     }
 
+    /**
+     * Find the last row that actually contains data, avoiding phantom rows
+     */
+    private int findLastRowWithData(Sheet sheet) {
+        // Start from a reasonable limit and work backwards
+        int maxRowToCheck = Math.min(sheet.getLastRowNum(), 10000); // Cap at 10k rows for safety
+        
+        for (int i = maxRowToCheck; i >= 1; i--) {
+            Row row = sheet.getRow(i);
+            if (row != null && hasData(row)) {
+                return i;
+            }
+        }
+        return 0; // No data rows found
+    }
+
+    /**
+     * Check if a row has any meaningful data
+     */
+    private boolean hasData(Row row) {
+        // Check if any of the relevant cells have data
+        String description = getCellValueAsString(row.getCell(1));
+        double amount = getCellValueAsDouble(row.getCell(2));
+        
+        return !description.trim().isEmpty() || amount != 0;
+    }
+
     private void insertIdColumn(Sheet sheet) {
         // Compute max column index across all rows
         int maxColumn = 0;
-        int lastRowNum = sheet.getLastRowNum();
+        int lastRowNum = findLastRowWithData(sheet);
         for (int r = 0; r <= lastRowNum; r++) {
             Row row = sheet.getRow(r);
             if (row != null) {

@@ -9,6 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Objects;
 
 @Service
 public class TransactionServiceImpl implements TransactionService {
@@ -118,7 +119,7 @@ public class TransactionServiceImpl implements TransactionService {
         // Get all transaction IDs from Excel (only those with IDs)
         List<Long> excelIds = transactions.stream()
                 .map(Transaction::getId)
-                .filter(id -> id != null)
+                .filter(Objects::nonNull)
                 .toList();
 
         // Find IDs that exist in DB but not in Excel (these should be deleted)

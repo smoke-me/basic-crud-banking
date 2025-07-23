@@ -65,8 +65,8 @@ public class ExcelExportServiceImpl implements ExcelExportService {
 
             ensureHeaderRow(sheet);
 
-            int rowIndex = sheet.getLastRowNum() + 1;
-            Row dataRow = sheet.createRow(rowIndex);
+            int rowIndex = findNextAvailableRow(sheet);
+            Row dataRow = getOrCreateRow(sheet, rowIndex);
             writeTransactionRow(dataRow, transaction);
 
             writeAndClose(workbook);
@@ -84,7 +84,8 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             ensureHeaderRow(sheet);
 
             boolean found = false;
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            int lastRowWithData = findLastRowWithData(sheet);
+            for (int i = 1; i <= lastRowWithData; i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
                 Cell idCell = row.getCell(0);
@@ -96,8 +97,8 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             }
 
             if (!found) {
-                int rowIndex = sheet.getLastRowNum() + 1;
-                writeTransactionRow(sheet.createRow(rowIndex), updatedTransaction);
+                int rowIndex = findNextAvailableRow(sheet);
+                writeTransactionRow(getOrCreateRow(sheet, rowIndex), updatedTransaction);
             }
 
             writeAndClose(workbook);
@@ -113,13 +114,14 @@ public class ExcelExportServiceImpl implements ExcelExportService {
             Sheet sheet = getOrCreateSheet(workbook);
 
             boolean deleted = false;
-            for (int i = 1; i <= sheet.getLastRowNum(); i++) {
+            int lastRowWithData = findLastRowWithData(sheet);
+            for (int i = 1; i <= lastRowWithData; i++) {
                 Row row = sheet.getRow(i);
                 if (row == null) continue;
                 Cell idCell = row.getCell(0);
                 if (idCell != null && idCell.getCellType() == CellType.NUMERIC && (long) idCell.getNumericCellValue() == id) {
                     sheet.removeRow(row);
-                    int lastRow = sheet.getLastRowNum();
+                    int lastRow = findLastRowWithData(sheet);
                     if (i < lastRow) {
                         sheet.shiftRows(i + 1, lastRow, -1);
                     }
@@ -138,8 +140,128 @@ public class ExcelExportServiceImpl implements ExcelExportService {
         }
     }
 
+    /**
+     * Find the next available row for writing data, treating empty rows and phantom rows the same.
+     * Scans from row 1 (after header) and finds the first truly empty row.
+     */
+    private int findNextAvailableRow(Sheet sheet) {
+        // Start from row 1 (after header row 0)
+        int rowIndex = 1;
+        
+        // Look for the first empty row by checking if it has meaningful data
+        while (rowIndex < 1048575) { // Stay well below Excel's limit
+            Row row = sheet.getRow(rowIndex);
+            if (isRowEmpty(row)) {
+                return rowIndex;
+            }
+            rowIndex++;
+        }
+        
+        // If we somehow reach here, something is very wrong
+        throw new ExcelExportException("Unable to find available row in Excel sheet");
+    }
+
+    /**
+     * Find the last row that actually contains data, avoiding phantom rows
+     */
+    private int findLastRowWithData(Sheet sheet) {
+        // Start from a reasonable limit and work backwards
+        int maxRowToCheck = Math.min(sheet.getLastRowNum(), 10000); // Cap at 10k rows for safety
+        
+        for (int i = maxRowToCheck; i >= 1; i--) {
+            Row row = sheet.getRow(i);
+            if (row != null && hasData(row)) {
+                return i;
+            }
+        }
+        return 0; // No data rows found
+    }
+
+    /**
+     * Check if a row has any meaningful data
+     */
+    private boolean hasData(Row row) {
+        // Check if any of the relevant cells have data
+        String description = getCellValueAsString(row.getCell(1));
+        double amount = getCellValueAsDouble(row.getCell(2));
+        
+        return !description.trim().isEmpty() || amount != 0;
+    }
+    
+    /**
+     * Check if a row is empty (treats null rows and rows with empty data the same)
+     */
+    private boolean isRowEmpty(Row row) {
+        if (row == null) {
+            return true;
+        }
+        
+        // Check if all relevant cells are empty
+        Cell idCell = row.getCell(0);
+        Cell descCell = row.getCell(1);
+        Cell amountCell = row.getCell(2);
+        Cell dateCell = row.getCell(3);
+        
+        return (idCell == null || getCellValueAsString(idCell).trim().isEmpty()) &&
+               (descCell == null || getCellValueAsString(descCell).trim().isEmpty()) &&
+               (amountCell == null || getCellValueAsDouble(amountCell) == 0) &&
+               (dateCell == null || getCellValueAsString(dateCell).trim().isEmpty());
+    }
+    
+    /**
+     * Get existing row or create new one if it doesn't exist
+     */
+    private Row getOrCreateRow(Sheet sheet, int rowIndex) {
+        Row row = sheet.getRow(rowIndex);
+        return (row != null) ? row : sheet.createRow(rowIndex);
+    }
+    
+    /**
+     * Helper method to get cell value as string safely
+     */
+    private String getCellValueAsString(Cell cell) {
+        if (cell == null) {
+            return "";
+        }
+        
+        switch (cell.getCellType()) {
+            case STRING:
+                return cell.getStringCellValue();
+            case NUMERIC:
+                return String.valueOf(cell.getNumericCellValue());
+            case BOOLEAN:
+                return String.valueOf(cell.getBooleanCellValue());
+            default:
+                return "";
+        }
+    }
+    
+    /**
+     * Helper method to get cell value as double safely
+     */
+    private double getCellValueAsDouble(Cell cell) {
+        if (cell == null) {
+            return 0;
+        }
+        
+        try {
+            switch (cell.getCellType()) {
+                case NUMERIC:
+                    return cell.getNumericCellValue();
+                case STRING:
+                    String value = cell.getStringCellValue().trim();
+                    return value.isEmpty() ? 0 : Double.parseDouble(value);
+                default:
+                    return 0;
+            }
+        } catch (NumberFormatException e) {
+            return 0;
+        }
+    }
+
     private void clearDataRows(Sheet sheet) {
-        for (int i = sheet.getLastRowNum(); i >= 1; i--) {
+        int lastRowWithData = findLastRowWithData(sheet);
+        for (int i = lastRowWithData; i >= 1; i--) {
             Row row = sheet.getRow(i);
             if (row != null) {
                 sheet.removeRow(row);
